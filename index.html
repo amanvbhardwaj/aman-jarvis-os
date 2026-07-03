@@ -364,9 +364,88 @@
       transform: scale(0.97);
       box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
     }
+
+    /* Boot-up overlay */
+    .jarvis-boot {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, #020617 0, #000000 65%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      color: #e5f6ff;
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      flex-direction: column;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.7);
+    }
+
+    .jarvis-boot-inner {
+      padding: 24px 32px;
+      border-radius: 18px;
+      border: 1px solid rgba(56, 189, 248, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      box-shadow: 0 0 32px rgba(56, 189, 248, 0.6);
+    }
+
+    .jarvis-boot-title {
+      color: #7dd3fc;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .jarvis-boot-line {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .jarvis-boot-line-active {
+      color: #22c55e;
+    }
+
+    .jarvis-boot-footer {
+      margin-top: 12px;
+      font-size: 9px;
+      color: #64748b;
+    }
+
+    .jarvis-boot-hidden {
+      animation: boot-fade-out 0.8s forwards;
+    }
+
+    @keyframes boot-fade-out {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
   </style>
 </head>
 <body>
+  <!-- Boot-up overlay -->
+  <div id="jarvis-boot" class="jarvis-boot">
+    <div class="jarvis-boot-inner">
+      <div class="jarvis-boot-title">AMAN OS · SYSTEM BOOT</div>
+      <div class="jarvis-boot-line jarvis-boot-line-active">
+        Initializing core subsystems…
+      </div>
+      <div class="jarvis-boot-line">
+        Loading Jarvis neural routines…
+      </div>
+      <div class="jarvis-boot-line">
+        Establishing encrypted data channels…
+      </div>
+      <div class="jarvis-boot-line">
+        Synchronizing HUD telemetry…
+      </div>
+      <div class="jarvis-boot-footer">
+        Jarvis · Cybernetic Interface Online
+      </div>
+    </div>
+  </div>
+
   <div class="jarvis-layout">
     <!-- Cybersecurity / system sidebar -->
     <div class="jarvis-sidebar">
@@ -471,6 +550,7 @@
     const sendBtn = document.getElementById('jarvis-send');
     const chatEl = document.getElementById('jarvis-chat');
     const replyEl = document.getElementById('jarvis-reply');
+    const bootEl = document.getElementById('jarvis-boot');
 
     // Show text with a simple typing effect
     function showReplySlowly(text) {
@@ -533,6 +613,16 @@
       if (e.key === 'Enter') {
         sendToJarvis();
       }
+    });
+
+    // Boot overlay timing
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        bootEl.classList.add('jarvis-boot-hidden');
+        setTimeout(() => {
+          bootEl.style.display = 'none';
+        }, 800); // match fade-out duration
+      }, 2500); // how long the boot screen stays visible
     });
   </script>
 </body>
