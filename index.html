@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Aman OS – Jarvis</title>
   <style>
-    /* Full-screen futuristic background */
+    /* Full-screen futuristic background with subtle grid */
     body {
       margin: 0;
       padding: 0;
@@ -17,21 +17,171 @@
       color: #e5f6ff;
     }
 
+    /* Background grid lines */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(15, 23, 42, 0.35) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.35) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* Layout: sidebar + main panel */
+    .jarvis-layout {
+      width: 90%;
+      max-width: 1100px;
+      height: 80vh;
+      display: flex;
+      gap: 24px;
+    }
+
+    /* Cybersecurity / system sidebar */
+    .jarvis-sidebar {
+      width: 230px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.3);
+      backdrop-filter: blur(12px);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      font-size: 11px;
+      color: #cbd5f5;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sidebar-section-title {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 10px;
+      color: #7dd3fc;
+      margin-bottom: 6px;
+    }
+
+    .security-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22c55e, #0ea5e9);
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+      color: #9ca3af;
+      font-size: 10px;
+    }
+
+    .metric-label {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric-value-ok {
+      color: #22c55e;
+    }
+
+    .metric-value-low {
+      color: #a3e635;
+    }
+
+    .metric-value-encrypted {
+      color: #38bdf8;
+    }
+
+    .radar-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .radar-dot {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 14px #22c55e;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: radar-pulse 2.8s ease-out infinite;
+    }
+
+    .radar-sweep {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: conic-gradient(
+        rgba(56, 189, 248, 0.25),
+        transparent,
+        transparent
+      );
+      animation: radar-sweep 5s linear infinite;
+      mix-blend-mode: screen;
+    }
+
+    @keyframes radar-pulse {
+      0% { transform: translate(-50%, -50%) scale(0.6); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+    }
+
+    @keyframes radar-sweep {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      font-size: 9px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
     /* Main Jarvis panel */
     .jarvis-panel {
-      width: 90%;
-      max-width: 900px;
-      height: 80vh;
+      flex: 1;
       padding: 24px;
       border-radius: 24px;
-      background: rgba(15, 23, 42, 0.75); /* glassy */
-      border: 1px solid rgba(56, 189, 248, 0.7); /* cyan border */
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.7);
       box-shadow: 0 0 40px rgba(56, 189, 248, 0.4);
       backdrop-filter: blur(18px);
       display: flex;
       flex-direction: column;
       position: relative;
       overflow: hidden;
+    }
+
+    /* Animated scan line over main panel */
+    .scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -40%;
+      height: 40%;
+      background: linear-gradient(to bottom, rgba(56, 189, 248, 0.16), transparent);
+      animation: scan 8s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes scan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(120%); }
     }
 
     /* Jarvis header */
@@ -134,53 +284,79 @@
       transform: scale(0.97);
       box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
     }
-
-    /* Small animated scan line */
-    .scan-line {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: -40%;
-      height: 40%;
-      background: linear-gradient(to bottom, rgba(56, 189, 248, 0.12), transparent);
-      animation: scan 8s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes scan {
-      0% { transform: translateY(0); }
-      100% { transform: translateY(120%); }
-    }
   </style>
 </head>
 <body>
-  <div class="jarvis-panel">
-    <div class="scan-line"></div>
+  <div class="jarvis-layout">
+    <!-- Cybersecurity / system sidebar -->
+    <div class="jarvis-sidebar">
+      <div>
+        <div class="sidebar-section-title">Security Matrix</div>
+        <div class="security-bar"></div>
+        <div class="metric-row">
+          <span class="metric-label">Firewall</span>
+          <span class="metric-value-ok">Active</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Threat Level</span>
+          <span class="metric-value-low">Low</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Encryption</span>
+          <span class="metric-value-encrypted">AES-256</span>
+        </div>
+      </div>
 
-    <div class="jarvis-header">
-      <div class="jarvis-title">AMAN OS – JARVIS</div>
-      <div class="jarvis-status">
-        <span class="jarvis-status-dot"></span>
-        Online
+      <div>
+        <div class="sidebar-section-title">Network Pulse</div>
+        <div class="radar-circle">
+          <div class="radar-dot"></div>
+          <div class="radar-sweep"></div>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Latency</span>
+          <span class="metric-value-encrypted">23 ms</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Nodes</span>
+          <span class="metric-value-ok">Jarvis · Aman OS</span>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        Aman OS · Cybernetic Interface
       </div>
     </div>
 
-    <div id="jarvis-chat" class="jarvis-chat">
-      <div class="jarvis-user">You: hey jarvis</div>
-      <div class="jarvis-assistant-label">Jarvis:</div>
-      <div id="jarvis-reply" class="jarvis-assistant-text">
-        Yes. How can I help you today?
-      </div>
-    </div>
+    <!-- Main Jarvis panel -->
+    <div class="jarvis-panel">
+      <div class="scan-line"></div>
 
-    <div class="jarvis-input-area">
-      <input
-        id="jarvis-input"
-        class="jarvis-input"
-        type="text"
-        placeholder="Speak to Jarvis..."
-      />
-      <button id="jarvis-send" class="jarvis-send-btn">Send</button>
+      <div class="jarvis-header">
+        <div class="jarvis-title">AMAN OS – JARVIS</div>
+        <div class="jarvis-status">
+          <span class="jarvis-status-dot"></span>
+          Online · Secure
+        </div>
+      </div>
+
+      <div id="jarvis-chat" class="jarvis-chat">
+        <div class="jarvis-user">You: hey jarvis</div>
+        <div class="jarvis-assistant-label">Jarvis:</div>
+        <div id="jarvis-reply" class="jarvis-assistant-text">
+          Yes. How can I help you today?
+        </div>
+      </div>
+
+      <div class="jarvis-input-area">
+        <input
+          id="jarvis-input"
+          class="jarvis-input"
+          type="text"
+          placeholder="Speak to Jarvis..."
+        />
+        <button id="jarvis-send" class="jarvis-send-btn">Send</button>
+      </div>
     </div>
   </div>
 
@@ -201,7 +377,7 @@
         if (i >= text.length) {
           clearInterval(interval);
         }
-      }, 20); // adjust speed if you like
+      }, 20);
     }
 
     async function sendToJarvis() {
@@ -227,7 +403,6 @@
       // Scroll to bottom
       chatEl.scrollTop = chatEl.scrollHeight;
 
-      // Call your backend
       try {
         const response = await fetch('https://aman-jarvis-backend.onrender.com/api/jarvis', {
           method: 'POST',
