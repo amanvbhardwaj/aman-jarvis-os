@@ -686,6 +686,38 @@
           </div>
 
           <div class="side-card">
+            <div class="side-card-title">Tonight’s Briefing → Morning</div>
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">Jarvis researches at 8pm and stages one idea. Approve it in the morning; you give the final submit.</div>
+            <div id="briefing-text" style="font-size:12px;color:#cbd5e1;white-space:pre-line;">No briefing yet. Runs nightly at 8pm.</div>
+            <div id="briefing-actions" style="display:none;gap:6px;margin-top:8px;">
+              <button class="module-btn" id="briefing-approve" style="flex:1;">Approve &amp; Stage</button>
+              <button class="module-btn" id="briefing-skip" style="flex:1;">Skip</button>
+            </div>
+            <div class="module-grid" style="margin-top:8px;">
+              <button class="module-btn" id="briefing-run-now">Run Briefing Now</button>
+              <button class="module-btn" id="briefing-refresh">Load Latest</button>
+            </div>
+            <div id="briefing-status" style="font-size:12px;color:#99f6e4;margin-top:6px;"></div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title">Safety Rails</div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <input id="set-maxtrade" class="jarvis-input" style="flex:1;box-sizing:border-box;" placeholder="Max/trade $" />
+              <input id="set-cushion" class="jarvis-input" style="flex:1;box-sizing:border-box;" placeholder="Cash cushion $" />
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <input id="set-stop" class="jarvis-input" style="flex:1;box-sizing:border-box;" placeholder="Stop-loss %" />
+              <input id="set-drop" class="jarvis-input" style="flex:1;box-sizing:border-box;" placeholder="Alert drop %" />
+            </div>
+            <div class="module-grid">
+              <button class="module-btn" id="save-rails">Save Rails</button>
+              <button class="module-btn" id="safety-now">Safety Check Now</button>
+            </div>
+            <div id="rails-status" style="font-size:12px;color:#99f6e4;margin-top:6px;"></div>
+          </div>
+
+          <div class="side-card">
             <div class="side-card-title">Grow / Post</div>
             <input id="linkedin-topic" class="jarvis-input" style="width:100%;box-sizing:border-box;margin-bottom:6px;" placeholder="LinkedIn post topic" />
             <div class="module-grid">
@@ -1081,6 +1113,107 @@
     }
     if (investApprove) investApprove.addEventListener('click', () => sendInvestDecision('approve'));
     if (investReject) investReject.addEventListener('click', () => sendInvestDecision('reject'));
+
+    // Nightly briefing: Jarvis researches at 8pm, stages one idea; you approve in the morning.
+    let briefingOrder = null;
+    const briefingText = document.getElementById('briefing-text');
+    const briefingActions = document.getElementById('briefing-actions');
+    const briefingStatus = document.getElementById('briefing-status');
+
+    function renderBriefing(b) {
+      briefingOrder = null;
+      briefingActions.style.display = 'none';
+      if (!b) { briefingText.textContent = 'No briefing yet. Runs nightly at 8pm.'; return; }
+      briefingText.textContent = b.spoken || 'Briefing ready.';
+      if (b.order && b.order.ticker && b.status === 'pending_morning_approval') {
+        briefingOrder = b.order;
+        briefingActions.style.display = 'flex';
+      }
+    }
+    async function loadBriefing() {
+      briefingStatus.textContent = 'Loading…';
+      try {
+        const r = await fetch(API + '/api/invest/nightly-briefing/latest');
+        const d = await r.json();
+        renderBriefing(d.briefing);
+        briefingStatus.textContent = d.briefing ? '' : 'Nothing staged yet.';
+      } catch (e) { briefingStatus.textContent = 'Could not load briefing.'; }
+    }
+    const bRunNow = document.getElementById('briefing-run-now');
+    const bRefresh = document.getElementById('briefing-refresh');
+    const bApprove = document.getElementById('briefing-approve');
+    const bSkip = document.getElementById('briefing-skip');
+    if (bRefresh) bRefresh.addEventListener('click', loadBriefing);
+    if (bRunNow) bRunNow.addEventListener('click', async () => {
+      briefingStatus.textContent = 'Jarvis is researching…';
+      try {
+        const r = await fetch(API + '/api/invest/nightly-briefing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const d = await r.json();
+        renderBriefing({ spoken: d.reply, order: d.order, status: 'pending_morning_approval' });
+        briefingStatus.textContent = d.note || '';
+        if (window.jarvisSpeak && d.reply) window.jarvisSpeak(d.reply);
+      } catch (e) { briefingStatus.textContent = 'Could not run the briefing.'; }
+    });
+    if (bApprove) bApprove.addEventListener('click', async () => {
+      if (!briefingOrder) return;
+      briefingStatus.textContent = 'Staging…';
+      briefingActions.style.display = 'none';
+      try {
+        const r = await fetch(API + '/api/invest/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order: briefingOrder, decision: 'approve' }) });
+        const d = await r.json();
+        briefingStatus.textContent = d.note || d.status || 'Staged.';
+        if (window.jarvisSpeak && d.note) window.jarvisSpeak(d.note);
+      } catch (e) { briefingStatus.textContent = 'Could not stage the order.'; }
+      briefingOrder = null;
+    });
+    if (bSkip) bSkip.addEventListener('click', async () => {
+      if (!briefingOrder) return;
+      briefingActions.style.display = 'none';
+      briefingStatus.textContent = 'Skipped.';
+      try { await fetch(API + '/api/invest/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order: briefingOrder, decision: 'reject' }) }); } catch (e) {}
+      briefingOrder = null;
+    });
+    loadBriefing();
+
+    // Safety rails: max per trade, cash cushion, stop-loss %, alert drop %.
+    const railsStatus = document.getElementById('rails-status');
+    async function loadRails() {
+      try {
+        const r = await fetch(API + '/api/invest/settings');
+        const d = await r.json();
+        const s = d.settings || {};
+        if (s.maxPerTrade != null) document.getElementById('set-maxtrade').value = s.maxPerTrade;
+        if (s.cashCushion != null) document.getElementById('set-cushion').value = s.cashCushion;
+        if (s.stopLossPct != null) document.getElementById('set-stop').value = s.stopLossPct;
+        if (s.bigDropPct != null) document.getElementById('set-drop').value = s.bigDropPct;
+      } catch (e) {}
+    }
+    const saveRails = document.getElementById('save-rails');
+    if (saveRails) saveRails.addEventListener('click', async () => {
+      railsStatus.textContent = 'Saving…';
+      try {
+        const body = {
+          maxPerTrade: document.getElementById('set-maxtrade').value,
+          cashCushion: document.getElementById('set-cushion').value,
+          stopLossPct: document.getElementById('set-stop').value,
+          bigDropPct: document.getElementById('set-drop').value,
+        };
+        const r = await fetch(API + '/api/invest/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const d = await r.json();
+        railsStatus.textContent = d.ok ? 'Saved. Jarvis will respect these.' : (d.note || 'Saved locally.');
+      } catch (e) { railsStatus.textContent = 'Could not save rails.'; }
+    });
+    const safetyNow = document.getElementById('safety-now');
+    if (safetyNow) safetyNow.addEventListener('click', async () => {
+      railsStatus.textContent = 'Checking…';
+      try {
+        const r = await fetch(API + '/api/invest/safety-check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const d = await r.json();
+        railsStatus.textContent = (d.level && d.level !== 'none' ? '[' + d.level.toUpperCase() + '] ' : '') + (d.reply || '');
+        if (window.jarvisSpeak && d.reply) window.jarvisSpeak(d.reply);
+      } catch (e) { railsStatus.textContent = 'Could not run safety check.'; }
+    });
+    loadRails();
 
     // LinkedIn: Jarvis drafts, you post (LinkedIn blocks auto-posting personal profiles)
     const dl = document.getElementById('draft-linkedin');
