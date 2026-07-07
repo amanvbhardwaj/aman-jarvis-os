@@ -632,6 +632,8 @@
               <button class="module-btn" data-mod="immigration">Immigration</button>
               <button class="module-btn" data-mod="content">Content Studio</button>
               <button class="module-btn" data-mod="income">Income Ideas</button>
+              <button class="module-btn" data-mod="marketing">Marketing</button>
+              <button class="module-btn" data-mod="outreach">Get Clients</button>
             </div>
           </div>
 
@@ -816,9 +818,40 @@
       health:      { path: '/api/health/coach',             label: 'Fitness Coach' },
       nutrition:   { path: '/api/nutrition/plan',           label: 'Nutrition' },
       immigration: { path: '/api/immigration/ask',          label: 'Immigration' },
-      content:     { path: '/api/content/draft',            label: 'Content Studio' },
+      content:     { path: '/api/content/draft',            label: 'Content Studio', approve: '/api/content/approve' },
       income:      { path: '/api/income/opportunities',     label: 'Income Ideas' },
+      marketing:   { path: '/api/marketing/campaign',       label: 'Marketing' },
+      outreach:    { path: '/api/outreach/draft',           label: 'Get Clients', approve: '/api/outreach/approve' },
     };
+
+    // Offer an approve/reject step for drafts that can be posted/sent
+    function offerApproval(cfg, draftText) {
+      const wrap = document.createElement('div');
+      wrap.style.margin = '8px 0';
+      const ap = document.createElement('button');
+      ap.className = 'jarvis-send-btn';
+      ap.style.marginRight = '8px';
+      ap.textContent = 'Approve';
+      const rej = document.createElement('button');
+      rej.className = 'module-btn';
+      rej.textContent = 'Reject';
+      wrap.appendChild(ap); wrap.appendChild(rej);
+      chatEl.appendChild(wrap);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      const decide = async (decision) => {
+        ap.disabled = rej.disabled = true;
+        try {
+          const r = await fetch(API + cfg.approve, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ draft: draftText, decision }),
+          });
+          const d = await r.json();
+          printAssistant('Decision:', d.note || (decision === 'approve' ? 'Approved.' : 'Rejected.'));
+        } catch (e) { printAssistant('Decision:', 'Could not save decision.'); }
+      };
+      ap.addEventListener('click', () => decide('approve'));
+      rej.addEventListener('click', () => decide('reject'));
+    }
 
     async function runModule(mod) {
       const cfg = MODULES[mod];
@@ -833,6 +866,8 @@
         const data = await r.json();
         printAssistant(cfg.label + ':', data.reply || 'No reply.');
         if (data.note) printAssistant('Note:', data.note);
+        // If this draft can be posted/sent, show Approve / Reject
+        if (cfg.approve && data.reply) offerApproval(cfg, data.reply);
       } catch (err) {
         printAssistant(cfg.label + ':', 'Error reaching Jarvis backend.');
       }
