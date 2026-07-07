@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Aman OS — Jarvis Firestore security rules
+// Paste these in Firebase Console -> Firestore Database -> Rules -> Publish.
+//
+// NOTE: These rules allow open read/write to Jarvis's collections. That is fine
+// for a personal, single-user app while you test. For real protection, add
+// Firebase Authentication (sign in as yourself) and change `if true` to
+// `if request.auth != null && request.auth.uid == "YOUR_UID";`
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Jarvis memory + module data
+    match /jarvis_messages/{doc}    { allow read, write: if true; }
+    match /user_profile/{doc}       { allow read, write: if true; }
+    match /finance_entries/{doc}    { allow read, write: if true; }
+    match /budgets/{doc}            { allow read, write: if true; }
+    match /savings_goals/{doc}      { allow read, write: if true; }
+    match /workouts/{doc}           { allow read, write: if true; }
+    match /health_metrics/{doc}     { allow read, write: if true; }
+    match /nutrition_entries/{doc}  { allow read, write: if true; }
+    match /nutrition_targets/{doc}  { allow read, write: if true; }
+    match /immigration_status/{doc} { allow read, write: if true; }
+    match /immigration_docs/{doc}   { allow read, write: if true; }
+    match /content_drafts/{doc}     { allow read, write: if true; }
+    match /income_leads/{doc}       { allow read, write: if true; }
+
+    // Everything else is denied
+    match /{document=**}            { allow read, write: if false; }
+  }
+}

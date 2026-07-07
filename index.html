@@ -369,6 +369,37 @@
       margin-top: 3px;
     }
 
+    /* Module + quick-log buttons */
+    .module-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .module-btn {
+      padding: 7px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(253, 247, 255, 0.4);
+      background: rgba(36, 27, 81, 0.75);
+      color: #fed1e9;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .module-btn:hover {
+      background: linear-gradient(135deg, #fb7185, #f97316);
+      color: #1f2937;
+      box-shadow: 0 0 14px rgba(251, 113, 133, 0.7);
+    }
+
+    .module-btn:active {
+      transform: scale(0.97);
+    }
+
     .jarvis-input-area {
       display: flex;
       gap: 10px;
@@ -589,33 +620,40 @@
           </div>
         </div>
 
-        <!-- Right side panel: Today’s Focus & Jarvis Thoughts -->
+        <!-- Right side panel: Life Modules -->
         <div class="jarvis-side-panel">
           <div class="side-card">
-            <div class="side-card-title">Today’s Focus</div>
-            <div class="timeline-item">
-              <span>Finance</span>
-              <span>Ready to review</span>
-            </div>
-            <div class="timeline-item">
-              <span>Health</span>
-              <span>Check hydration</span>
-            </div>
-            <div class="timeline-item">
-              <span>Nutrition</span>
-              <span>Plan protein</span>
+            <div class="side-card-title">Life Modules</div>
+            <div class="module-grid">
+              <button class="module-btn" data-mod="brief">Daily Brief</button>
+              <button class="module-btn" data-mod="finance">Personal CFO</button>
+              <button class="module-btn" data-mod="health">Fitness Coach</button>
+              <button class="module-btn" data-mod="nutrition">Nutrition</button>
+              <button class="module-btn" data-mod="immigration">Immigration</button>
+              <button class="module-btn" data-mod="content">Content Studio</button>
+              <button class="module-btn" data-mod="income">Income Ideas</button>
             </div>
           </div>
 
           <div class="side-card">
-            <div class="side-card-title">Jarvis Thoughts</div>
+            <div class="side-card-title">Quick Log</div>
+            <input id="log-input" class="jarvis-input" style="width:100%;box-sizing:border-box;margin-bottom:6px;" placeholder="e.g. spent 40 groceries" />
+            <div class="module-grid">
+              <button class="module-btn" data-log="finance">Log $</button>
+              <button class="module-btn" data-log="health">Log Workout</button>
+              <button class="module-btn" data-log="nutrition">Log Meal</button>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title">Jarvis Mode</div>
             <div class="timeline-item">
-              <span>Next Step</span>
-              <span>Share one thing you want to change.</span>
+              <span>Brain</span>
+              <span>Perplexity Sonar</span>
             </div>
             <div class="timeline-item">
-              <span>Mode</span>
-              <span>Gentle · Companion</span>
+              <span>Memory</span>
+              <span>On · Firestore</span>
             </div>
           </div>
         </div>
@@ -754,6 +792,81 @@
       if (e.key === 'Enter') {
         sendToJarvis();
       }
+    });
+
+    // ---- Life Modules ----
+    const API = 'https://aman-jarvis-backend.onrender.com';
+
+    function printAssistant(prefixLabel, text) {
+      const label = document.createElement('div');
+      label.className = 'jarvis-assistant-label';
+      label.textContent = prefixLabel;
+      chatEl.appendChild(label);
+      const body = document.createElement('div');
+      body.className = 'jarvis-assistant-text';
+      body.textContent = text;
+      chatEl.appendChild(body);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      if (window.logJarvisMessage) window.logJarvisMessage('assistant', text);
+    }
+
+    const MODULES = {
+      brief:       { path: '/api/brief',                    label: 'Daily Brief' },
+      finance:     { path: '/api/finance/advice',           label: 'Personal CFO' },
+      health:      { path: '/api/health/coach',             label: 'Fitness Coach' },
+      nutrition:   { path: '/api/nutrition/plan',           label: 'Nutrition' },
+      immigration: { path: '/api/immigration/ask',          label: 'Immigration' },
+      content:     { path: '/api/content/draft',            label: 'Content Studio' },
+      income:      { path: '/api/income/opportunities',     label: 'Income Ideas' },
+    };
+
+    async function runModule(mod) {
+      const cfg = MODULES[mod];
+      if (!cfg) return;
+      printAssistant(cfg.label + ' · working…', 'Jarvis is thinking…');
+      try {
+        const r = await fetch(API + cfg.path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const data = await r.json();
+        printAssistant(cfg.label + ':', data.reply || 'No reply.');
+        if (data.note) printAssistant('Note:', data.note);
+      } catch (err) {
+        printAssistant(cfg.label + ':', 'Error reaching Jarvis backend.');
+      }
+    }
+
+    document.querySelectorAll('.module-btn[data-mod]').forEach((btn) => {
+      btn.addEventListener('click', () => runModule(btn.getAttribute('data-mod')));
+    });
+
+    // ---- Quick Log ----
+    const logInput = document.getElementById('log-input');
+    const LOGS = {
+      finance:   { path: '/api/finance/log',   build: (t) => ({ note: t, amount: (t.match(/\d+(\.\d+)?/)||[])[0] || null, category: 'general' }) },
+      health:    { path: '/api/health/log',     build: (t) => ({ workout: t }) },
+      nutrition: { path: '/api/nutrition/log',  build: (t) => ({ meal: t }) },
+    };
+    async function quickLog(kind) {
+      const t = (logInput.value || '').trim();
+      if (!t) { printAssistant('Quick Log:', 'Type something to log first.'); return; }
+      const cfg = LOGS[kind];
+      try {
+        await fetch(API + cfg.path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg.build(t)),
+        });
+        printAssistant('Logged:', `${kind} — “${t}” saved to memory.`);
+        logInput.value = '';
+      } catch (err) {
+        printAssistant('Quick Log:', 'Could not save. Check backend.');
+      }
+    }
+    document.querySelectorAll('.module-btn[data-log]').forEach((btn) => {
+      btn.addEventListener('click', () => quickLog(btn.getAttribute('data-log')));
     });
 
     window.addEventListener('load', () => {
