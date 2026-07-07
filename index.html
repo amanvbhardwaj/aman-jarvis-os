@@ -641,7 +641,12 @@
   <!-- Firebase + Firestore module -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBGrvClsO9EZ8gKSQ0QSCJeLSM-e7xeUYM",
@@ -655,7 +660,20 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    // db is ready for Jarvis data
+
+    // Jarvis memory: log each message (yours and Jarvis's) into Firestore.
+    // This is how Jarvis remembers your conversations over time.
+    window.logJarvisMessage = async (role, text) => {
+      try {
+        await addDoc(collection(db, "jarvis_messages"), {
+          role,
+          text,
+          createdAt: serverTimestamp()
+        });
+      } catch (err) {
+        console.error("Error logging Jarvis message to Firestore:", err);
+      }
+    };
   </script>
 
   <!-- Jarvis logic -->
@@ -683,6 +701,11 @@
       const userMessage = inputEl.value.trim();
       if (!userMessage) return;
 
+      // Save your message to Jarvis's memory (Firestore)
+      if (window.logJarvisMessage) {
+        window.logJarvisMessage('user', userMessage);
+      }
+
       const userLine = document.createElement('div');
       userLine.className = 'jarvis-user';
       userLine.textContent = `You: ${userMessage}`;
@@ -708,10 +731,19 @@
         const data = await response.json();
         const text = data.reply || 'No reply from Jarvis.';
 
+        // Save Jarvis's reply to memory too
+        if (window.logJarvisMessage) {
+          window.logJarvisMessage('assistant', text);
+        }
+
         showReplySlowly(text);
         chatEl.scrollTop = chatEl.scrollHeight;
       } catch (err) {
-        showReplySlowly('Error talking to Jarvis.');
+        const fallback = 'Error talking to Jarvis.';
+        if (window.logJarvisMessage) {
+          window.logJarvisMessage('assistant', fallback);
+        }
+        showReplySlowly(fallback);
       }
 
       inputEl.value = '';
