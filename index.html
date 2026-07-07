@@ -545,6 +545,29 @@
     </div>
   </div>
 
+  <!-- Firebase + Firestore module -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGrvClsO9EZ8gKSQ0QSCJeLSM-e7xeUYM",
+      authDomain: "aman-jarvis-project.firebaseapp.com",
+      projectId: "aman-jarvis-project",
+      storageBucket: "aman-jarvis-project.firebasestorage.app",
+      messagingSenderId: "241507204249",
+      appId: "1:241507204249:web:0d880d7d58d35b76154c08",
+      measurementId: "G-E2QQGB785V"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // `db` is now ready to be used for saving Jarvis data (finance, health, nutrition, Instagram plans)
+    // In the next step, we’ll add functions that use `db` to write documents.
+  </script>
+
+  <!-- Jarvis logic -->
   <script>
     const inputEl = document.getElementById('jarvis-input');
     const sendBtn = document.getElementById('jarvis-send');
