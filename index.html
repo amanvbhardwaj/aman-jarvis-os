@@ -907,118 +907,161 @@
     });
 
     // =====================================================================
-    // VOICE: "Hello Jarvis" wake-word + speech-to-text + speak replies
+    // VOICE: "Hello Jarvis" wake-word + speech-to-text + spoken replies
     // Uses the browser's built-in Web Speech API (free, no credits).
-    // Premium AI voice can be swapped into speak() later.
+    // Premium AI voice can be swapped into jarvisSpeak() later.
     // =====================================================================
-    const voiceToggle = document.getElementById('voice-toggle');
-    const micStatus = document.getElementById('mic-status');
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-    let voiceOn = false;
-    let awake = false;          // true right after wake-word, so next speech is the command
-    let awakeTimer = null;
+    (function initVoice() {
+      const voiceToggle = document.getElementById('voice-toggle');
+      const micStatus = document.getElementById('mic-status');
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // ---- Jarvis speaks a reply out loud ----
-    function speak(text) {
-      try {
-        if (!('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = 1.02; u.pitch = 1.0; u.lang = 'en-US';
-        // Prefer a natural English voice if available
-        const voices = window.speechSynthesis.getVoices();
-        const preferred = voices.find(v => /Google|Samantha|Zira|Natural|English/i.test(v.name));
-        if (preferred) u.voice = preferred;
-        window.speechSynthesis.speak(u);
-      } catch (e) { /* ignore */ }
-    }
-    // Make module/chat replies speak automatically when voice is on
-    const _origPrintAssistant = printAssistant;
-    printAssistant = function (label, text) {
-      _origPrintAssistant(label, text);
-      if (voiceOn && text && label !== 'Note:') speak(text);
-    };
+      let recognition = null;
+      let voiceOn = false;
+      let awake = false;        // true right after wake-word, next speech = command
+      let awakeTimer = null;
+      let busy = false;         // pause the mic while Jarvis is speaking/thinking
+      let cachedVoice = null;
 
-    // ---- Send a spoken command to Jarvis ----
-    async function voiceAsk(commandText) {
-      micStatus.textContent = 'Thinking…';
-      const userLine = document.createElement('div');
-      userLine.className = 'jarvis-user';
-      userLine.textContent = `You (voice): ${commandText}`;
-      chatEl.appendChild(userLine);
-      if (window.logJarvisMessage) window.logJarvisMessage('user', commandText);
-      try {
-        const r = await fetch(API + '/api/jarvis', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: commandText }),
-        });
-        const d = await r.json();
-        printAssistant('Jarvis:', d.reply || 'No reply.');
-      } catch (e) {
-        printAssistant('Jarvis:', 'Sorry, I could not reach the backend.');
+      function setStatus(t) { if (micStatus) micStatus.textContent = t; }
+
+      // Load a natural voice (Chrome loads voices async)
+      function pickVoice() {
+        if (!('speechSynthesis' in window)) return null;
+        const vs = window.speechSynthesis.getVoices() || [];
+        cachedVoice =
+          vs.find(v => /Google US English/i.test(v.name)) ||
+          vs.find(v => /Samantha|Google|Natural/i.test(v.name)) ||
+          vs.find(v => /en[-_]US/i.test(v.lang)) ||
+          vs.find(v => /^en/i.test(v.lang)) || null;
       }
-      micStatus.textContent = voiceOn ? 'Say “Hello Jarvis”' : 'Voice off';
-    }
+      if ('speechSynthesis' in window) {
+        pickVoice();
+        window.speechSynthesis.onvoiceschanged = pickVoice;
+      }
 
-    // ---- Handle recognized speech (wake-word logic) ----
-    function handleTranscript(raw) {
-      const text = (raw || '').trim();
-      if (!text) return;
-      const lower = text.toLowerCase();
-      const wake = /(hello|hey|hi|ok)\s+jarvis/;
-      if (awake) {
-        // Already awake — treat this as the command
-        clearTimeout(awakeTimer);
-        awake = false;
-        micStatus.textContent = 'Heard you…';
-        voiceAsk(text.replace(wake, '').trim() || text);
-      } else if (wake.test(lower)) {
-        // Wake word heard; command may follow in same phrase
-        const after = lower.split(wake)[2] ? text.substring(lower.search(wake)).replace(wake, '').trim() : '';
-        if (after && after.length > 1) {
-          voiceAsk(after);
-        } else {
-          awake = true;
-          micStatus.textContent = 'Yes? I’m listening…';
-          speak('Yes?');
-          awakeTimer = setTimeout(() => { awake = false; micStatus.textContent = 'Say “Hello Jarvis”'; }, 8000);
+      // ---- Jarvis speaks out loud ----
+      function jarvisSpeak(text, onDone) {
+        if (!('speechSynthesis' in window) || !text) { if (onDone) onDone(); return; }
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(String(text).slice(0, 600));
+          u.rate = 1.03; u.pitch = 1.0; u.lang = 'en-US';
+          if (cachedVoice) u.voice = cachedVoice;
+          u.onend = () => { if (onDone) onDone(); };
+          u.onerror = () => { if (onDone) onDone(); };
+          window.speechSynthesis.speak(u);
+        } catch (e) { if (onDone) onDone(); }
+      }
+      window.jarvisSpeak = jarvisSpeak; // exposed for premium-voice swap later
+
+      // ---- Send a spoken command to Jarvis and speak the reply ----
+      async function voiceAsk(commandText) {
+        busy = true;
+        setStatus('Thinking…');
+        const userLine = document.createElement('div');
+        userLine.className = 'jarvis-user';
+        userLine.textContent = 'You (voice): ' + commandText;
+        chatEl.appendChild(userLine);
+        chatEl.scrollTop = chatEl.scrollHeight;
+        if (window.logJarvisMessage) window.logJarvisMessage('user', commandText);
+        let reply = 'Sorry, I could not reach the backend.';
+        try {
+          const r = await fetch(API + '/api/jarvis', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: commandText }),
+          });
+          const d = await r.json();
+          reply = d.reply || 'No reply.';
+        } catch (e) { /* keep fallback */ }
+        printAssistant('Jarvis:', reply);
+        setStatus('Speaking…');
+        jarvisSpeak(reply, () => {
+          busy = false;
+          setStatus(voiceOn ? 'Say “Hello Jarvis”' : 'Voice off');
+        });
+      }
+
+      // ---- Wake-word + command handling ----
+      const WAKE = /\b(hello|hey|hi|okay|ok)\s+jarvis\b/i;
+      function handleTranscript(raw) {
+        const text = (raw || '').trim();
+        if (!text || busy) return;
+        if (awake) {
+          clearTimeout(awakeTimer);
+          awake = false;
+          voiceAsk(text);
+          return;
+        }
+        const m = text.match(WAKE);
+        if (m) {
+          // Anything said after the wake phrase = the command
+          const after = text.slice(m.index + m[0].length).trim();
+          if (after.length > 1) {
+            voiceAsk(after);
+          } else {
+            awake = true;
+            setStatus('Yes? I’m listening…');
+            jarvisSpeak('Yes?');
+            awakeTimer = setTimeout(() => {
+              awake = false;
+              setStatus(voiceOn ? 'Say “Hello Jarvis”' : 'Voice off');
+            }, 9000);
+          }
         }
       }
-    }
 
-    function startRecognition() {
-      if (!SR) { micStatus.textContent = 'Voice not supported in this browser'; return; }
-      recognition = new SR();
-      recognition.continuous = true;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      recognition.onresult = (ev) => {
-        const last = ev.results[ev.results.length - 1];
-        if (last && last.isFinal) handleTranscript(last[0].transcript);
-      };
-      recognition.onerror = () => { /* keep going */ };
-      recognition.onend = () => { if (voiceOn) { try { recognition.start(); } catch (e) {} } };
-      try { recognition.start(); } catch (e) {}
-    }
-
-    voiceToggle.addEventListener('click', () => {
-      voiceOn = !voiceOn;
-      if (voiceOn) {
-        voiceToggle.textContent = '● Voice: On';
-        voiceToggle.style.color = '#bef264';
-        micStatus.textContent = 'Say “Hello Jarvis”';
-        startRecognition();
-        speak('Voice activated. Say Hello Jarvis when you need me.');
-      } else {
-        voiceToggle.textContent = '● Voice: Off';
-        voiceToggle.style.color = '';
-        micStatus.textContent = 'Voice off';
-        awake = false;
-        if (recognition) { try { recognition.stop(); } catch (e) {} }
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      function startRecognition() {
+        if (!SR) { setStatus('Voice needs Chrome desktop'); return false; }
+        recognition = new SR();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        recognition.onresult = (ev) => {
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            if (ev.results[i].isFinal) handleTranscript(ev.results[i][0].transcript);
+          }
+        };
+        recognition.onerror = (e) => {
+          if (e && (e.error === 'not-allowed' || e.error === 'service-not-allowed')) {
+            voiceOn = false;
+            voiceToggle.textContent = '● Voice: Off';
+            setStatus('Mic blocked — allow microphone access');
+          }
+        };
+        recognition.onend = () => {
+          if (voiceOn) { try { recognition.start(); } catch (e) {} }
+        };
+        try { recognition.start(); return true; } catch (e) { return false; }
       }
-    });
+
+      if (!SR) {
+        setStatus('Voice needs Chrome desktop');
+      }
+
+      voiceToggle.addEventListener('click', () => {
+        voiceOn = !voiceOn;
+        if (voiceOn) {
+          voiceToggle.textContent = '● Voice: On';
+          voiceToggle.style.color = '#bef264';
+          const ok = startRecognition();
+          if (ok) {
+            setStatus('Say “Hello Jarvis”');
+            // Prime speech synthesis (Chrome needs a user gesture first)
+            jarvisSpeak('Voice on. Say Hello Jarvis when you need me.');
+          }
+        } else {
+          voiceToggle.textContent = '● Voice: Off';
+          voiceToggle.style.color = '';
+          setStatus('Voice off');
+          awake = false;
+          busy = false;
+          if (recognition) { try { recognition.stop(); } catch (e) {} recognition = null; }
+          if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        }
+      });
+    })();
 
     window.addEventListener('load', () => {
       setTimeout(() => {
