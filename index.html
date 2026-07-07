@@ -664,6 +664,28 @@
           </div>
 
           <div class="side-card">
+            <div class="side-card-title">Investing (approve each trade)</div>
+            <input id="invest-goal" class="jarvis-input" style="width:100%;box-sizing:border-box;margin-bottom:6px;" placeholder="Goal (e.g. grow long-term, buy VFV)" />
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <input id="invest-amount" class="jarvis-input" style="flex:1;box-sizing:border-box;" placeholder="Amount $" />
+              <select id="invest-risk" class="jarvis-input" style="flex:1;box-sizing:border-box;">
+                <option value="conservative">Conservative</option>
+                <option value="balanced" selected>Balanced</option>
+                <option value="aggressive">Aggressive</option>
+              </select>
+            </div>
+            <div class="module-grid">
+              <button class="module-btn" id="invest-propose">Propose Trade</button>
+            </div>
+            <div id="invest-proposal" style="font-size:12px;color:#cbd5e1;margin-top:8px;white-space:pre-line;"></div>
+            <div id="invest-actions" style="display:none;gap:6px;margin-top:8px;">
+              <button class="module-btn" id="invest-approve" style="flex:1;">Approve &amp; Place</button>
+              <button class="module-btn" id="invest-reject" style="flex:1;">Reject</button>
+            </div>
+            <div id="invest-status" style="font-size:12px;color:#99f6e4;margin-top:6px;"></div>
+          </div>
+
+          <div class="side-card">
             <div class="side-card-title">Grow / Post</div>
             <input id="linkedin-topic" class="jarvis-input" style="width:100%;box-sizing:border-box;margin-bottom:6px;" placeholder="LinkedIn post topic" />
             <div class="module-grid">
@@ -683,7 +705,15 @@
             </div>
             <div class="timeline-item">
               <span>Money</span>
-              <span>Read-only · never moves funds</span>
+              <span>Read-only balances</span>
+            </div>
+            <div class="timeline-item">
+              <span>Investing</span>
+              <span>Propose · you approve each</span>
+            </div>
+            <div class="timeline-item">
+              <span>Voice</span>
+              <span id="voice-mode-label">Browser</span>
             </div>
           </div>
         </div>
@@ -1001,6 +1031,57 @@
     if (co) co.addEventListener('click', () => linkBank('Bank'));
     if (rs) rs.addEventListener('click', refreshStats);
 
+    // Investing: Jarvis proposes a trade, you approve each one before it's placed.
+    let pendingOrder = null;
+    const investProposal = document.getElementById('invest-proposal');
+    const investActions = document.getElementById('invest-actions');
+    const investStatus = document.getElementById('invest-status');
+    const investPropose = document.getElementById('invest-propose');
+    const investApprove = document.getElementById('invest-approve');
+    const investReject = document.getElementById('invest-reject');
+
+    if (investPropose) investPropose.addEventListener('click', async () => {
+      const goal = (document.getElementById('invest-goal').value || '').trim();
+      const amount = (document.getElementById('invest-amount').value || '').trim();
+      const risk = (document.getElementById('invest-risk').value || 'balanced');
+      pendingOrder = null;
+      investActions.style.display = 'none';
+      investStatus.textContent = '';
+      investProposal.textContent = 'Jarvis is preparing a proposal…';
+      try {
+        const r = await fetch(API + '/api/invest/propose', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ goal, amount, risk }),
+        });
+        const d = await r.json();
+        investProposal.textContent = d.reply || 'No proposal.';
+        if (window.jarvisSpeak) window.jarvisSpeak(d.reply || '');
+        if (d.order && d.order.ticker) {
+          pendingOrder = d.order;
+          investActions.style.display = 'flex';
+        }
+        if (d.note) investStatus.textContent = d.note;
+      } catch (e) { investProposal.textContent = 'Could not reach Jarvis for a proposal.'; }
+    });
+
+    async function sendInvestDecision(decision) {
+      if (!pendingOrder) return;
+      investStatus.textContent = decision === 'approve' ? 'Placing…' : 'Rejected.';
+      investActions.style.display = 'none';
+      try {
+        const r = await fetch(API + '/api/invest/approve', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: pendingOrder, decision }),
+        });
+        const d = await r.json();
+        investStatus.textContent = d.reply || d.note || (d.status || 'Done.');
+        if (window.jarvisSpeak && d.reply) window.jarvisSpeak(d.reply);
+      } catch (e) { investStatus.textContent = 'Could not complete that action.'; }
+      pendingOrder = null;
+    }
+    if (investApprove) investApprove.addEventListener('click', () => sendInvestDecision('approve'));
+    if (investReject) investReject.addEventListener('click', () => sendInvestDecision('reject'));
+
     // LinkedIn: Jarvis drafts, you post (LinkedIn blocks auto-posting personal profiles)
     const dl = document.getElementById('draft-linkedin');
     if (dl) dl.addEventListener('click', async () => {
@@ -1050,8 +1131,21 @@
         window.speechSynthesis.onvoiceschanged = pickVoice;
       }
 
-      // ---- Jarvis speaks out loud ----
-      function jarvisSpeak(text, onDone) {
+      // ---- Premium voice detection (ElevenLabs on the backend) ----
+      let premiumVoice = false;      // set true if backend has ELEVENLABS_API_KEY
+      let currentAudio = null;       // the <audio> element currently playing
+      (async function checkVoice() {
+        try {
+          const r = await fetch(API + '/api/voice/status');
+          const d = await r.json();
+          premiumVoice = !!(d && d.premium);
+        } catch (e) { premiumVoice = false; }
+        const lbl = document.getElementById('voice-mode-label');
+        if (lbl) lbl.textContent = premiumVoice ? 'ElevenLabs · human' : 'Browser';
+      })();
+
+      // ---- Browser (robotic) fallback voice ----
+      function browserSpeak(text, onDone) {
         if (!('speechSynthesis' in window) || !text) { if (onDone) onDone(); return; }
         try {
           window.speechSynthesis.cancel();
@@ -1063,7 +1157,42 @@
           window.speechSynthesis.speak(u);
         } catch (e) { if (onDone) onDone(); }
       }
-      window.jarvisSpeak = jarvisSpeak; // exposed for premium-voice swap later
+
+      // ---- Jarvis speaks out loud (ElevenLabs if available, else browser) ----
+      async function jarvisSpeak(text, onDone) {
+        if (!text) { if (onDone) onDone(); return; }
+        // Stop any prior speech (both engines)
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+        if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
+
+        if (!premiumVoice) { browserSpeak(text, onDone); return; }
+
+        // Premium: ask backend for ElevenLabs MP3
+        try {
+          const r = await fetch(API + '/api/voice/speak', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: String(text).slice(0, 800) }),
+          });
+          const ct = r.headers.get('content-type') || '';
+          if (!r.ok || !ct.includes('audio')) {
+            // Backend said not configured / errored — fall back gracefully
+            premiumVoice = false;
+            browserSpeak(text, onDone);
+            return;
+          }
+          const blob = await r.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          currentAudio = audio;
+          audio.onended = () => { URL.revokeObjectURL(url); currentAudio = null; if (onDone) onDone(); };
+          audio.onerror = () => { URL.revokeObjectURL(url); currentAudio = null; browserSpeak(text, onDone); };
+          await audio.play();
+        } catch (e) {
+          browserSpeak(text, onDone);
+        }
+      }
+      window.jarvisSpeak = jarvisSpeak;
 
       // ---- Send a spoken command to Jarvis and speak the reply ----
       async function voiceAsk(commandText) {
