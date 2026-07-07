@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Aman OS – Jarvis</title>
   <style>
-    /* Full-screen futuristic background with subtle grid */
+    /* Soft cherry blossom sunset background */
     body {
       margin: 0;
       padding: 0;
@@ -12,71 +12,75 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      background: radial-gradient(circle at top, #0f172a 0, #020617 60%);
+      background: radial-gradient(circle at top,
+        #fbd3e9 0,
+        #e4b5d3 35%,
+        #9f8cd4 70%,
+        #1b1933 100%);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #e5f6ff;
+      color: #fdf7ff;
     }
 
-    /* Background grid lines */
+    /* Subtle blossom overlay instead of harsh grid */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       background-image:
-        linear-gradient(rgba(15, 23, 42, 0.35) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(15, 23, 42, 0.35) 1px, transparent 1px);
-      background-size: 40px 40px;
-      opacity: 0.35;
+        radial-gradient(circle at 10% 10%, rgba(251, 211, 233, 0.35) 0, transparent 40px),
+        radial-gradient(circle at 85% 20%, rgba(236, 180, 211, 0.35) 0, transparent 55px),
+        radial-gradient(circle at 15% 75%, rgba(239, 188, 220, 0.25) 0, transparent 50px),
+        radial-gradient(circle at 80% 80%, rgba(230, 170, 210, 0.18) 0, transparent 45px);
+      opacity: 0.6;
       pointer-events: none;
     }
 
-    /* Layout: sidebar + main panel */
     .jarvis-layout {
-      width: 90%;
-      max-width: 1100px;
-      height: 80vh;
+      width: 94%;
+      max-width: 1180px;
+      height: 82vh;
       display: flex;
-      gap: 24px;
+      gap: 18px;
     }
 
-    /* Cybersecurity / system sidebar */
+    /* Glassmorphism sidebar */
     .jarvis-sidebar {
-      width: 230px;
-      border-radius: 20px;
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.5);
-      box-shadow: 0 0 24px rgba(56, 189, 248, 0.3);
-      backdrop-filter: blur(12px);
+      width: 240px;
+      border-radius: 22px;
+      background: rgba(20, 16, 35, 0.38);
+      border: 1px solid rgba(253, 247, 255, 0.25);
+      box-shadow: 0 18px 40px rgba(24, 16, 48, 0.45);
+      backdrop-filter: blur(18px);
       padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 18px;
+      gap: 16px;
       font-size: 11px;
-      color: #cbd5f5;
+      color: #fdf7ff;
       position: relative;
       overflow: hidden;
     }
 
     .sidebar-section-title {
       text-transform: uppercase;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.18em;
       font-size: 10px;
-      color: #7dd3fc;
-      margin-bottom: 6px;
+      color: #fed1e9;
+      margin-bottom: 5px;
     }
 
     .security-bar {
-      height: 6px;
+      height: 7px;
       border-radius: 999px;
-      background: linear-gradient(90deg, #22c55e, #0ea5e9);
-      box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+      background: linear-gradient(90deg, #fb7185, #f97316, #22c55e);
+      box-shadow: 0 0 16px rgba(251, 113, 133, 0.85);
     }
 
     .metric-row {
       display: flex;
       justify-content: space-between;
-      margin-top: 6px;
-      color: #9ca3af;
+      margin-top: 4px;
+      color: #e0cde7;
       font-size: 10px;
     }
 
@@ -86,39 +90,39 @@
     }
 
     .metric-value-ok {
-      color: #22c55e;
+      color: #bef264;
     }
 
     .metric-value-low {
-      color: #a3e635;
+      color: #fde68a;
     }
 
     .metric-value-encrypted {
-      color: #38bdf8;
+      color: #99f6e4;
     }
 
-    /* Radar widget */
+    /* Soft blossom-inspired “radar” */
     .radar-circle {
-      width: 120px;
-      height: 120px;
+      width: 110px;
+      height: 110px;
       border-radius: 50%;
-      border: 1px solid rgba(56, 189, 248, 0.5);
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
-      margin: 0 auto;
+      border: 1px solid rgba(252, 211, 233, 0.65);
+      box-shadow: 0 0 22px rgba(252, 211, 233, 0.8);
+      margin: 8px auto 8px auto;
       position: relative;
     }
 
     .radar-dot {
       position: absolute;
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 14px #22c55e;
+      background: #fb7185;
+      box-shadow: 0 0 18px #fb7185;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      animation: radar-pulse 2.8s ease-out infinite;
+      animation: radar-pulse 3.2s ease-out infinite;
     }
 
     .radar-sweep {
@@ -127,17 +131,17 @@
       height: 100%;
       border-radius: 50%;
       background: conic-gradient(
-        rgba(56, 189, 248, 0.25),
+        rgba(252, 211, 233, 0.4),
         transparent,
         transparent
       );
-      animation: radar-sweep 5s linear infinite;
+      animation: radar-sweep 7s linear infinite;
       mix-blend-mode: screen;
     }
 
     @keyframes radar-pulse {
-      0% { transform: translate(-50%, -50%) scale(0.6); opacity: 1; }
-      100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+      0% { transform: translate(-50%, -50%) scale(0.55); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
     }
 
     @keyframes radar-sweep {
@@ -145,33 +149,32 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* CPU ring widget */
     .cpu-ring-wrapper {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-top: 10px;
+      gap: 10px;
+      margin-top: 6px;
     }
 
     .cpu-ring {
-      width: 50px;
-      height: 50px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
-      border: 2px solid rgba(56, 189, 248, 0.6);
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+      border: 2px solid rgba(252, 211, 233, 0.7);
+      box-shadow: 0 0 16px rgba(252, 211, 233, 0.7);
       position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
       font-size: 11px;
-      color: #7dd3fc;
+      color: #fed1e9;
     }
 
     .cpu-ring-inner {
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      border: 1px dashed rgba(148, 163, 184, 0.7);
+      border: 1px dashed rgba(209, 213, 219, 0.8);
     }
 
     .cpu-ring-sweep {
@@ -179,11 +182,11 @@
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      border-top: 2px solid #0ea5e9;
+      border-top: 2px solid #fb7185;
       border-right: 2px solid transparent;
       border-bottom: 2px solid transparent;
       border-left: 2px solid transparent;
-      animation: cpu-spin 6s linear infinite;
+      animation: cpu-spin 9s linear infinite;
     }
 
     @keyframes cpu-spin {
@@ -193,33 +196,32 @@
 
     .cpu-labels {
       font-size: 9px;
-      color: #9ca3af;
+      color: #e0cde7;
     }
 
-    /* Core temperature bar */
     .temp-bar-container {
-      margin-top: 10px;
+      margin-top: 8px;
     }
 
     .temp-bar-track {
-      height: 6px;
+      height: 7px;
       border-radius: 999px;
-      background: rgba(39, 39, 42, 0.9);
-      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(17, 24, 39, 0.85);
+      border: 1px solid rgba(209, 213, 219, 0.6);
       overflow: hidden;
     }
 
     .temp-bar-fill {
       height: 100%;
-      width: 62%; /* static for now, looks like 62°C */
-      background: linear-gradient(90deg, #f97316, #ef4444);
-      box-shadow: 0 0 14px rgba(248, 113, 113, 0.8);
+      width: 56%;
+      background: linear-gradient(90deg, #fb7185, #f97316);
+      box-shadow: 0 0 16px rgba(251, 113, 133, 0.85);
     }
 
     .temp-bar-label {
-      margin-top: 4px;
+      margin-top: 3px;
       font-size: 9px;
-      color: #9ca3af;
+      color: #e0cde7;
       display: flex;
       justify-content: space-between;
     }
@@ -227,35 +229,34 @@
     .sidebar-footer {
       margin-top: auto;
       font-size: 9px;
-      color: #64748b;
+      color: #d1c4e9;
       text-transform: uppercase;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.14em;
     }
 
-    /* Main Jarvis panel */
+    /* Main Jarvis panel – glass card */
     .jarvis-panel {
       flex: 1;
-      padding: 24px;
-      border-radius: 24px;
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(56, 189, 248, 0.7);
-      box-shadow: 0 0 40px rgba(56, 189, 248, 0.4);
-      backdrop-filter: blur(18px);
+      padding: 20px;
+      border-radius: 26px;
+      background: rgba(18, 15, 35, 0.52);
+      border: 1px solid rgba(253, 247, 255, 0.35);
+      box-shadow: 0 26px 60px rgba(9, 9, 17, 0.75);
+      backdrop-filter: blur(22px);
       display: flex;
       flex-direction: column;
       position: relative;
       overflow: hidden;
     }
 
-    /* Animated scan line over main panel */
     .scan-line {
       position: absolute;
       left: 0;
       right: 0;
       top: -40%;
       height: 40%;
-      background: linear-gradient(to bottom, rgba(56, 189, 248, 0.16), transparent);
-      animation: scan 8s linear infinite;
+      background: linear-gradient(to bottom, rgba(252, 211, 233, 0.16), transparent);
+      animation: scan 10s linear infinite;
       pointer-events: none;
     }
 
@@ -264,25 +265,24 @@
       100% { transform: translateY(120%); }
     }
 
-    /* Jarvis header */
     .jarvis-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .jarvis-title {
-      font-size: 20px;
-      letter-spacing: 0.15em;
+      font-size: 18px;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: #7dd3fc;
+      color: #fed1e9;
     }
 
     .jarvis-status {
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
-      color: #38bdf8;
+      color: #99f6e4;
     }
 
     .jarvis-status-dot {
@@ -291,31 +291,41 @@
       height: 8px;
       border-radius: 50%;
       background: #22c55e;
-      box-shadow: 0 0 12px #22c55e;
+      box-shadow: 0 0 14px #22c55e;
       margin-right: 6px;
     }
 
-    /* Chat area */
-    .jarvis-chat {
+    .jarvis-grid {
+      display: grid;
+      grid-template-columns: 2.4fr 1.6fr;
+      gap: 16px;
       flex: 1;
-      padding: 16px;
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.5);
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 64, 175, 0.45));
+      min-height: 0;
+    }
+
+    /* Conversation card */
+    .jarvis-chat {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(253, 247, 255, 0.25);
+      background: linear-gradient(135deg,
+        rgba(18, 15, 35, 0.9),
+        rgba(36, 27, 81, 0.9));
       overflow-y: auto;
       font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap; /* keep line breaks */
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: #fdf7ff;
     }
 
     .jarvis-user {
-      color: #e5f6ff;
-      margin-bottom: 8px;
+      color: #fde68a;
+      margin-bottom: 6px;
     }
 
     .jarvis-assistant-label {
-      color: #7dd3fc;
-      margin-top: 12px;
+      color: #fed1e9;
+      margin-top: 10px;
       margin-bottom: 4px;
       text-transform: uppercase;
       font-size: 11px;
@@ -323,75 +333,119 @@
     }
 
     .jarvis-assistant-text {
-      color: #c4e1ff;
+      color: #e5e7eb;
     }
 
-    /* Input area */
+    /* Right side – Today’s Focus and Jarvis Thoughts */
+    .jarvis-side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .side-card {
+      border-radius: 18px;
+      border: 1px solid rgba(253, 247, 255, 0.3);
+      background: rgba(18, 15, 35, 0.85);
+      padding: 10px 12px;
+      font-size: 11px;
+      color: #fdf7ff;
+      position: relative;
+    }
+
+    .side-card-title {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 10px;
+      color: #fed1e9;
+      margin-bottom: 5px;
+    }
+
+    .timeline-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #e0cde7;
+      margin-top: 3px;
+    }
+
     .jarvis-input-area {
       display: flex;
-      gap: 12px;
-      margin-top: 16px;
+      gap: 10px;
+      margin-top: 14px;
     }
 
     .jarvis-input {
       flex: 1;
-      padding: 10px 12px;
+      padding: 9px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      background: rgba(15, 23, 42, 0.9);
-      color: #e5f6ff;
+      border: 1px solid rgba(253, 247, 255, 0.45);
+      background: rgba(18, 15, 35, 0.9);
+      color: #fdf7ff;
       outline: none;
+      font-size: 13px;
     }
 
     .jarvis-input::placeholder {
-      color: #64748b;
+      color: #d1c4e9;
     }
 
     .jarvis-send-btn {
-      padding: 10px 20px;
+      padding: 9px 18px;
       border-radius: 999px;
       border: none;
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);
-      color: #0b1120;
+      background: linear-gradient(135deg, #fb7185, #f97316);
+      color: #1f2937;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.12em;
       cursor: pointer;
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 18px rgba(251, 113, 133, 0.85);
+      font-size: 11px;
     }
 
     .jarvis-send-btn:active {
       transform: scale(0.97);
-      box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 8px rgba(251, 113, 133, 0.65);
     }
 
-    /* Boot-up overlay */
+    .jarvis-footer-bar {
+      margin-top: 6px;
+      font-size: 9px;
+      color: #e0cde7;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      display: flex;
+      justify-content: space-between;
+    }
+
     .jarvis-boot {
       position: fixed;
       inset: 0;
-      background: radial-gradient(circle at top, #020617 0, #000000 65%);
+      background: radial-gradient(circle at top, #fbd3e9 0, #1b1933 75%);
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 999;
-      color: #e5f6ff;
+      color: #fdf7ff;
       font-size: 13px;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       flex-direction: column;
-      border-bottom: 1px solid rgba(56, 189, 248, 0.7);
+      border-bottom: 1px solid rgba(253, 247, 255, 0.4);
+      backdrop-filter: blur(24px);
     }
 
     .jarvis-boot-inner {
-      padding: 24px 32px;
-      border-radius: 18px;
-      border: 1px solid rgba(56, 189, 248, 0.7);
-      background: rgba(15, 23, 42, 0.9);
-      box-shadow: 0 0 32px rgba(56, 189, 248, 0.6);
+      padding: 22px 30px;
+      border-radius: 20px;
+      border: 1px solid rgba(253, 247, 255, 0.6);
+      background: rgba(18, 15, 35, 0.9);
+      box-shadow: 0 0 36px rgba(9, 9, 17, 0.9);
     }
 
     .jarvis-boot-title {
-      color: #7dd3fc;
+      color: #fed1e9;
       margin-bottom: 10px;
       font-size: 16px;
     }
@@ -399,18 +453,18 @@
     .jarvis-boot-line {
       font-size: 11px;
       letter-spacing: 0.12em;
-      color: #9ca3af;
+      color: #e0cde7;
       margin-top: 4px;
     }
 
     .jarvis-boot-line-active {
-      color: #22c55e;
+      color: #bef264;
     }
 
     .jarvis-boot-footer {
       margin-top: 12px;
       font-size: 9px;
-      color: #64748b;
+      color: #d1c4e9;
     }
 
     .jarvis-boot-hidden {
@@ -427,63 +481,63 @@
   <!-- Boot-up overlay -->
   <div id="jarvis-boot" class="jarvis-boot">
     <div class="jarvis-boot-inner">
-      <div class="jarvis-boot-title">AMAN OS · SYSTEM BOOT</div>
+      <div class="jarvis-boot-title">AMAN OS · SAKURA SESSION</div>
       <div class="jarvis-boot-line jarvis-boot-line-active">
-        Initializing core subsystems…
+        Warming sunset channels…
       </div>
       <div class="jarvis-boot-line">
-        Loading Jarvis neural routines…
+        Listening for your thoughts…
       </div>
       <div class="jarvis-boot-line">
-        Establishing encrypted data channels…
+        Aligning Jarvis to your day…
       </div>
       <div class="jarvis-boot-line">
-        Synchronizing HUD telemetry…
+        Preparing gentle life insights…
       </div>
       <div class="jarvis-boot-footer">
-        Jarvis · Cybernetic Interface Online
+        Under the blossoms, Jarvis is ready.
       </div>
     </div>
   </div>
 
   <div class="jarvis-layout">
-    <!-- Cybersecurity / system sidebar -->
+    <!-- Sidebar -->
     <div class="jarvis-sidebar">
       <div>
-        <div class="sidebar-section-title">Security Matrix</div>
+        <div class="sidebar-section-title">Aura Status</div>
         <div class="security-bar"></div>
         <div class="metric-row">
-          <span class="metric-label">Firewall</span>
-          <span class="metric-value-ok">Active</span>
+          <span class="metric-label">Mood</span>
+          <span class="metric-value-ok">Balanced</span>
         </div>
         <div class="metric-row">
-          <span class="metric-label">Threat Level</span>
+          <span class="metric-label">Noise</span>
           <span class="metric-value-low">Low</span>
         </div>
         <div class="metric-row">
-          <span class="metric-label">Encryption</span>
-          <span class="metric-value-encrypted">AES-256</span>
+          <span class="metric-label">Channel</span>
+          <span class="metric-value-encrypted">Private</span>
         </div>
       </div>
 
       <div>
-        <div class="sidebar-section-title">Network Pulse</div>
+        <div class="sidebar-section-title">Presence Map</div>
         <div class="radar-circle">
           <div class="radar-dot"></div>
           <div class="radar-sweep"></div>
         </div>
         <div class="metric-row">
-          <span class="metric-label">Latency</span>
-          <span class="metric-value-encrypted">23 ms</span>
+          <span class="metric-label">You</span>
+          <span class="metric-value-encrypted">Connected</span>
         </div>
         <div class="metric-row">
-          <span class="metric-label">Nodes</span>
-          <span class="metric-value-ok">Jarvis · Aman OS</span>
+          <span class="metric-label">Jarvis</span>
+          <span class="metric-value-ok">Listening</span>
         </div>
       </div>
 
       <div>
-        <div class="sidebar-section-title">CPU Utilization</div>
+        <div class="sidebar-section-title">Inner Load</div>
         <div class="cpu-ring-wrapper">
           <div class="cpu-ring">
             <div class="cpu-ring-inner"></div>
@@ -491,29 +545,29 @@
             <span>68%</span>
           </div>
           <div class="cpu-labels">
-            Core Cluster: Stable<br />
-            Priority: Jarvis Processes
+            Thoughts processed<br />
+            Gently, one by one
           </div>
         </div>
       </div>
 
       <div class="temp-bar-container">
-        <div class="sidebar-section-title">Core Temperature</div>
+        <div class="sidebar-section-title">Heart Warmth</div>
         <div class="temp-bar-track">
           <div class="temp-bar-fill"></div>
         </div>
         <div class="temp-bar-label">
-          <span>Jarvis Core</span>
-          <span>62°C</span>
+          <span>Session Comfort</span>
+          <span>Soft</span>
         </div>
       </div>
 
       <div class="sidebar-footer">
-        Aman OS · Cybernetic Interface
+        Aman OS · Cherry Blossom Companion
       </div>
     </div>
 
-    <!-- Main Jarvis panel -->
+    <!-- Main panel -->
     <div class="jarvis-panel">
       <div class="scan-line"></div>
 
@@ -521,15 +575,49 @@
         <div class="jarvis-title">AMAN OS – JARVIS</div>
         <div class="jarvis-status">
           <span class="jarvis-status-dot"></span>
-          Online · Secure
+          Under Blossoms · Online
         </div>
       </div>
 
-      <div id="jarvis-chat" class="jarvis-chat">
-        <div class="jarvis-user">You: hey jarvis</div>
-        <div class="jarvis-assistant-label">Jarvis:</div>
-        <div id="jarvis-reply" class="jarvis-assistant-text">
-          Yes. How can I help you today?
+      <div class="jarvis-grid">
+        <!-- Conversation -->
+        <div id="jarvis-chat" class="jarvis-chat">
+          <div class="jarvis-user">You: hey jarvis</div>
+          <div class="jarvis-assistant-label">Jarvis:</div>
+          <div id="jarvis-reply" class="jarvis-assistant-text">
+            I’m here. What’s on your mind right now?
+          </div>
+        </div>
+
+        <!-- Right side panel: Today’s Focus & Jarvis Thoughts -->
+        <div class="jarvis-side-panel">
+          <div class="side-card">
+            <div class="side-card-title">Today’s Focus</div>
+            <div class="timeline-item">
+              <span>Finance</span>
+              <span>Ready to review</span>
+            </div>
+            <div class="timeline-item">
+              <span>Health</span>
+              <span>Check hydration</span>
+            </div>
+            <div class="timeline-item">
+              <span>Nutrition</span>
+              <span>Plan protein</span>
+            </div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title">Jarvis Thoughts</div>
+            <div class="timeline-item">
+              <span>Next Step</span>
+              <span>Share one thing you want to change.</span>
+            </div>
+            <div class="timeline-item">
+              <span>Mode</span>
+              <span>Gentle · Companion</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -538,9 +626,14 @@
           id="jarvis-input"
           class="jarvis-input"
           type="text"
-          placeholder="Speak to Jarvis..."
+          placeholder="Tell Jarvis what’s on your mind…"
         />
         <button id="jarvis-send" class="jarvis-send-btn">Send</button>
+      </div>
+
+      <div class="jarvis-footer-bar">
+        <span>AMAN OS · Cherry Blossom Session</span>
+        <span>Jarvis · Money · Health · Nutrition · Dreams</span>
       </div>
     </div>
   </div>
@@ -562,9 +655,7 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
-    // `db` is now ready to be used for saving Jarvis data (finance, health, nutrition, Instagram plans)
-    // In the next step, we’ll add functions that use `db` to write documents.
+    // db is ready for Jarvis data
   </script>
 
   <!-- Jarvis logic -->
@@ -575,7 +666,6 @@
     const replyEl = document.getElementById('jarvis-reply');
     const bootEl = document.getElementById('jarvis-boot');
 
-    // Show text with a simple typing effect
     function showReplySlowly(text) {
       replyEl.textContent = '';
       let i = 0;
@@ -593,23 +683,19 @@
       const userMessage = inputEl.value.trim();
       if (!userMessage) return;
 
-      // Show user message in the chat area
       const userLine = document.createElement('div');
       userLine.className = 'jarvis-user';
       userLine.textContent = `You: ${userMessage}`;
       chatEl.appendChild(userLine);
 
-      // Label for Jarvis reply
       const label = document.createElement('div');
       label.className = 'jarvis-assistant-label';
       label.textContent = 'Jarvis:';
       chatEl.appendChild(label);
 
-      // Clear current reply element for new text
       replyEl.textContent = '';
       chatEl.appendChild(replyEl);
 
-      // Scroll to bottom
       chatEl.scrollTop = chatEl.scrollHeight;
 
       try {
@@ -638,14 +724,13 @@
       }
     });
 
-    // Boot overlay timing
     window.addEventListener('load', () => {
       setTimeout(() => {
         bootEl.classList.add('jarvis-boot-hidden');
         setTimeout(() => {
           bootEl.style.display = 'none';
-        }, 800); // match fade-out duration
-      }, 2500); // how long the boot screen stays visible
+        }, 800);
+      }, 2500);
     });
   </script>
 </body>
