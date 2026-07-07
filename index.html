@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>Aman OS – Jarvis</title>
+  <!-- Plaid Link (secure bank connection UI) -->
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
   <style>
     /* Soft cherry blossom sunset background */
     body {
@@ -650,6 +652,26 @@
           </div>
 
           <div class="side-card">
+            <div class="side-card-title">Connected Accounts</div>
+            <div class="module-grid">
+              <button class="module-btn" id="connect-scotiabank">Link Scotiabank</button>
+              <button class="module-btn" id="connect-wealthsimple">Link Wealthsimple</button>
+              <button class="module-btn" id="connect-bank-other">Link Other Bank</button>
+              <button class="module-btn" id="refresh-stats">Refresh Stats</button>
+            </div>
+            <div id="accounts-status" style="font-size:12px;color:#99f6e4;margin-top:8px;">Not linked yet.</div>
+            <div id="accounts-stats" style="font-size:12px;color:#cbd5e1;margin-top:6px;white-space:pre-line;"></div>
+          </div>
+
+          <div class="side-card">
+            <div class="side-card-title">Grow / Post</div>
+            <input id="linkedin-topic" class="jarvis-input" style="width:100%;box-sizing:border-box;margin-bottom:6px;" placeholder="LinkedIn post topic" />
+            <div class="module-grid">
+              <button class="module-btn" id="draft-linkedin">Draft LinkedIn Post</button>
+            </div>
+          </div>
+
+          <div class="side-card">
             <div class="side-card-title">Jarvis Mode</div>
             <div class="timeline-item">
               <span>Brain</span>
@@ -658,6 +680,10 @@
             <div class="timeline-item">
               <span>Memory</span>
               <span>On · Firestore</span>
+            </div>
+            <div class="timeline-item">
+              <span>Money</span>
+              <span>Read-only · never moves funds</span>
             </div>
           </div>
         </div>
@@ -904,6 +930,90 @@
     }
     document.querySelectorAll('.module-btn[data-log]').forEach((btn) => {
       btn.addEventListener('click', () => quickLog(btn.getAttribute('data-log')));
+    });
+
+    // =====================================================================
+    // CONNECTED ACCOUNTS: Plaid (Scotiabank, Wealthsimple, other) + LinkedIn draft
+    // Read-only. Jarvis reads balances/holdings; it never moves money.
+    // =====================================================================
+    const acctStatus = document.getElementById('accounts-status');
+    const acctStats = document.getElementById('accounts-stats');
+
+    async function linkBank(institutionLabel) {
+      if (typeof Plaid === 'undefined') {
+        acctStatus.textContent = 'Bank linking script not loaded — refresh the page.';
+        return;
+      }
+      acctStatus.textContent = 'Preparing secure ' + institutionLabel + ' link…';
+      let linkToken;
+      try {
+        const r = await fetch(API + '/api/plaid/link-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const d = await r.json();
+        if (!d.ok) { acctStatus.textContent = d.note || 'Plaid not configured on the backend yet.'; return; }
+        linkToken = d.link_token;
+      } catch (e) { acctStatus.textContent = 'Could not reach the backend to start linking.'; return; }
+
+      const handler = Plaid.create({
+        token: linkToken,
+        onSuccess: async (public_token) => {
+          acctStatus.textContent = 'Finishing ' + institutionLabel + ' link…';
+          try {
+            const r = await fetch(API + '/api/plaid/exchange', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ public_token, institution: institutionLabel }),
+            });
+            const d = await r.json();
+            acctStatus.textContent = d.ok ? (institutionLabel + ' linked ✓') : (d.error || 'Link failed.');
+            if (d.ok) refreshStats();
+          } catch (e) { acctStatus.textContent = 'Link exchange failed.'; }
+        },
+        onExit: (err) => { if (err) acctStatus.textContent = 'Linking cancelled.'; },
+      });
+      handler.open();
+    }
+
+    async function refreshStats() {
+      acctStatus.textContent = 'Reading your accounts…';
+      try {
+        const [bRes, iRes] = await Promise.all([
+          fetch(API + '/api/plaid/balances').then(r => r.json()),
+          fetch(API + '/api/plaid/investments').then(r => r.json()),
+        ]);
+        if (bRes.ok === false && bRes.note) { acctStatus.textContent = bRes.note; return; }
+        let lines = [];
+        let cash = 0;
+        (bRes.accounts || []).forEach(a => {
+          if (typeof a.current === 'number') { cash += a.current; lines.push(`${a.institution} ${a.name}: $${a.current.toLocaleString()}`); }
+        });
+        let invested = 0;
+        (iRes.holdings || []).forEach(h => { if (typeof h.value === 'number') invested += h.value; });
+        acctStatus.textContent = `Cash $${cash.toLocaleString()} · Invested $${invested.toLocaleString()}`;
+        acctStats.textContent = lines.join('\n');
+      } catch (e) { acctStatus.textContent = 'Could not read stats.'; }
+    }
+
+    const cs = document.getElementById('connect-scotiabank');
+    const cw = document.getElementById('connect-wealthsimple');
+    const co = document.getElementById('connect-bank-other');
+    const rs = document.getElementById('refresh-stats');
+    if (cs) cs.addEventListener('click', () => linkBank('Scotiabank'));
+    if (cw) cw.addEventListener('click', () => linkBank('Wealthsimple'));
+    if (co) co.addEventListener('click', () => linkBank('Bank'));
+    if (rs) rs.addEventListener('click', refreshStats);
+
+    // LinkedIn: Jarvis drafts, you post (LinkedIn blocks auto-posting personal profiles)
+    const dl = document.getElementById('draft-linkedin');
+    if (dl) dl.addEventListener('click', async () => {
+      const topic = (document.getElementById('linkedin-topic').value || '').trim();
+      printAssistant('Jarvis:', 'Drafting your LinkedIn post…');
+      try {
+        const r = await fetch(API + '/api/linkedin/draft', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic }),
+        });
+        const d = await r.json();
+        printAssistant('LinkedIn draft (review, then post yourself):', d.reply || 'No draft.');
+      } catch (e) { printAssistant('Jarvis:', 'Could not draft the post.'); }
     });
 
     // =====================================================================
