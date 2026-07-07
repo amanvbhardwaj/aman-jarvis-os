@@ -958,6 +958,8 @@
       // ---- Send a spoken command to Jarvis and speak the reply ----
       async function voiceAsk(commandText) {
         busy = true;
+        // Hard-stop the mic so Jarvis never hears its own voice (no runaway loop).
+        pauseMic();
         setStatus('Thinking…');
         const userLine = document.createElement('div');
         userLine.className = 'jarvis-user';
@@ -978,8 +980,14 @@
         printAssistant('Jarvis:', reply);
         setStatus('Speaking…');
         jarvisSpeak(reply, () => {
+          // Jarvis finished talking — now (and only now) re-open the mic and listen.
           busy = false;
-          setStatus(voiceOn ? 'Say “Hello Jarvis”' : 'Voice off');
+          if (voiceOn) {
+            setStatus('Say “Hello Jarvis”');
+            resumeMic();
+          } else {
+            setStatus('Voice off');
+          }
         });
       }
 
@@ -1012,6 +1020,16 @@
         }
       }
 
+      // Stop the mic completely (used while Jarvis is thinking/speaking).
+      function pauseMic() {
+        if (recognition) { try { recognition.stop(); } catch (e) {} }
+      }
+      // Re-open the mic after Jarvis finishes speaking.
+      function resumeMic() {
+        if (!voiceOn || busy) return;
+        try { recognition && recognition.start(); } catch (e) { /* already running */ }
+      }
+
       function startRecognition() {
         if (!SR) { setStatus('Voice needs Chrome desktop'); return false; }
         recognition = new SR();
@@ -1019,6 +1037,7 @@
         recognition.interimResults = false;
         recognition.lang = 'en-US';
         recognition.onresult = (ev) => {
+          if (busy) return; // ignore anything captured while Jarvis is talking
           for (let i = ev.resultIndex; i < ev.results.length; i++) {
             if (ev.results[i].isFinal) handleTranscript(ev.results[i][0].transcript);
           }
@@ -1031,7 +1050,9 @@
           }
         };
         recognition.onend = () => {
-          if (voiceOn) { try { recognition.start(); } catch (e) {} }
+          // Only auto-restart if voice is on AND Jarvis isn't mid-response.
+          // (While busy, voiceAsk restarts the mic itself when speech ends.)
+          if (voiceOn && !busy) { try { recognition.start(); } catch (e) {} }
         };
         try { recognition.start(); return true; } catch (e) { return false; }
       }
@@ -1045,11 +1066,18 @@
         if (voiceOn) {
           voiceToggle.textContent = '● Voice: On';
           voiceToggle.style.color = '#bef264';
+          busy = true; // stay quiet on the mic while the greeting plays
           const ok = startRecognition();
           if (ok) {
-            setStatus('Say “Hello Jarvis”');
+            setStatus('Starting…');
+            pauseMic();
             // Prime speech synthesis (Chrome needs a user gesture first)
-            jarvisSpeak('Voice on. Say Hello Jarvis when you need me.');
+            jarvisSpeak('Voice on. Say Hello Jarvis when you need me.', () => {
+              busy = false;
+              if (voiceOn) { setStatus('Say “Hello Jarvis”'); resumeMic(); }
+            });
+          } else {
+            busy = false;
           }
         } else {
           voiceToggle.textContent = '● Voice: Off';
